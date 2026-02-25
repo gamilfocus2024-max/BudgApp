@@ -312,7 +312,7 @@ export default function Dashboard() {
 
             {/* Top categories */}
             {stats?.topCategories?.length > 0 && (
-                <div className="card">
+                <div className="card" style={{ marginTop: 24 }}>
                     <div className="card-header">
                         <h3 style={{ fontSize: 15, fontWeight: 700 }}>🏆 Top catégories de dépenses ce mois</h3>
                     </div>

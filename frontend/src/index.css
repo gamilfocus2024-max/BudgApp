@@ -574,6 +574,7 @@ textarea.form-control {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
+  height: 100dvh;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -1845,6 +1846,14 @@ textarea.form-control {
   .sidebar.mobile-open {
     transform: translateX(0);
     box-shadow: var(--shadow-xl);
+  }
+
+  .sidebar-footer {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
+  }
+
+  .sidebar-logout-btn {
+    padding: 14px 12px;
   }
 
   .main-content {

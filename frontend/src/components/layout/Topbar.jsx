@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom'
 import { Menu, Bell, Sun, Moon, Search, Plus } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAuth } from '../../contexts/AuthContext'
-import api from '../../services/api'
 import { formatDate } from '../../utils/formatters'
 import TransactionModal from '../transactions/TransactionModal'
 
@@ -33,7 +32,7 @@ export default function Topbar({ onToggleSidebar }) {
     const pageTitle = PAGE_TITLES[location.pathname] || 'BudgApp'
 
     useEffect(() => {
-        fetchNotifications()
+        // fetchNotifications() // Disabled for now as we migrated to Firebase
     }, [])
 
     useEffect(() => {
@@ -45,19 +44,14 @@ export default function Topbar({ onToggleSidebar }) {
     }, [])
 
     const fetchNotifications = async () => {
-        try {
-            const res = await api.get('/stats/notifications')
-            setNotifications(res.data.notifications)
-            setUnreadCount(res.data.unreadCount)
-        } catch { }
+        // Placeholder for future Firestore-based notifications
+        setNotifications([])
+        setUnreadCount(0)
     }
 
     const markAllRead = async () => {
-        try {
-            await api.patch('/stats/notifications/read-all')
-            setUnreadCount(0)
-            setNotifications(n => n.map(x => ({ ...x, is_read: 1 })))
-        } catch { }
+        setUnreadCount(0)
+        setNotifications(n => n.map(x => ({ ...x, is_read: 1 })))
     }
 
     return (
@@ -131,7 +125,7 @@ export default function Topbar({ onToggleSidebar }) {
                                                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, color: 'var(--text-primary)' }}>{n.title}</div>
                                                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{n.message}</div>
                                                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                    {formatDate(new Date(n.created_at * 1000).toISOString(), 'd MMM à HH:mm')}
+                                                    {formatDate(new Date().toISOString(), 'd MMM à HH:mm')}
                                                 </div>
                                             </div>
                                         </div>

@@ -41,6 +41,10 @@ export const createCategory = async (userId, data) => {
     return { id: docRef.id, ...data };
 };
 
+export const deleteCategory = async (id) => {
+    await deleteDoc(doc(db, 'categories', id));
+};
+
 // TRANSACTIONS
 export const getTransactions = async (userId, filters = {}) => {
     let q = query(

@@ -26,7 +26,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
     const { user, logout } = useAuth()
 
     return (
-        <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
+        <aside id="sidebar-nav" className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
             {/* Logo */}
             <div className="sidebar-logo">
                 <div className="sidebar-logo-icon">B</div>

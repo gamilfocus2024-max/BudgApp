@@ -73,6 +73,7 @@ export function AuthProvider({ children }) {
             name,
             currency,
             theme: 'light',
+            hasSeenTour: false,
             createdAt: new Date().toISOString(),
             role: 'user'
         }

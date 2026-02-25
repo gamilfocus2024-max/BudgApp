@@ -67,6 +67,7 @@ export default function Topbar({ onToggleSidebar }) {
                 <div className="topbar-actions">
                     {/* Bouton ajout rapide */}
                     <button
+                        id="add-transaction-btn"
                         className="btn btn-primary btn-sm"
                         onClick={() => setShowAddModal(true)}
                         style={{ gap: 6 }}
@@ -76,7 +77,7 @@ export default function Topbar({ onToggleSidebar }) {
                     </button>
 
                     {/* Theme toggle */}
-                    <button className="btn btn-ghost btn-icon" onClick={toggleTheme} title="Changer de thème" aria-label="Thème">
+                    <button id="theme-toggle-btn" className="btn btn-ghost btn-icon" onClick={toggleTheme} title="Changer de thème" aria-label="Thème">
                         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                     </button>
 

@@ -130,7 +130,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats cards */}
-            <div className="stats-grid-4" style={{ marginBottom: 28 }}>
+            <div id="stats-overview" className="stats-grid-4" style={{ marginBottom: 28 }}>
                 <StatCard title="Solde Total" icon={Wallet} color="var(--brand-500)" value={stats?.total?.balance || 0} currency={currency} subtitle="balance" />
                 <StatCard title="Revenus du mois" icon={TrendingUp} color="var(--success-500)" value={stats?.monthly?.income || 0} currency={currency} subtitle="income" />
                 <StatCard title="Dépenses du mois" icon={TrendingDown} color="var(--danger-500)" value={stats?.monthly?.expenses || 0} currency={currency} subtitle="expense" />

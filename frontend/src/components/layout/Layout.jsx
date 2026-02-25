@@ -3,6 +3,7 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { LayoutDashboard, ArrowUpDown, PiggyBank, Target, BarChart3 } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import OnboardingTour from './OnboardingTour'
 
 const MOBILE_NAV = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
@@ -39,6 +40,7 @@ export default function Layout() {
 
     return (
         <div className="app-shell">
+            <OnboardingTour />
             {/* Mobile sidebar overlay */}
             {mobileOpen && (
                 <div

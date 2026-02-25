@@ -13,10 +13,10 @@ import Settings from './pages/Settings'
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth()
     if (loading) return (
-        <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
+        <div style={{ height: '100dvh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
             <div style={{ textAlign: 'center' }}>
                 <div className="spinner" style={{ width: 40, height: 40, margin: '0 auto 16px' }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Chargement...</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 14, fontWeight: 500 }}>Chargement...</p>
             </div>
         </div>
     )

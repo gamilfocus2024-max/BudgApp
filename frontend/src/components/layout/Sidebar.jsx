@@ -75,13 +75,13 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
 
             {/* User Footer */}
             <div className="sidebar-footer">
-                <div className="nav-item" style={{ marginBottom: 4, cursor: 'default', pointerEvents: 'none' }}>
+                <div className="sidebar-user-box">
                     <div className="avatar-placeholder" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>
                         {getInitials(user?.name)}
                     </div>
                     {!collapsed && (
                         <div style={{ minWidth: 0 }}>
-                            <div className="truncate" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                            <div className="truncate" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                                 {user?.name}
                             </div>
                             <div className="truncate" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -90,13 +90,13 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
                         </div>
                     )}
                 </div>
+
                 <button
-                    className="nav-item btn-ghost"
-                    style={{ color: 'var(--danger-500)', width: '100%', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)' }}
+                    className="sidebar-logout-btn"
                     onClick={logout}
                     title={collapsed ? 'Déconnexion' : undefined}
                 >
-                    <span className="nav-icon"><LogOut size={18} /></span>
+                    <LogOut size={18} />
                     {!collapsed && <span>Déconnexion</span>}
                 </button>
             </div>

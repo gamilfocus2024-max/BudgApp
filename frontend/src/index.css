@@ -712,6 +712,40 @@ textarea.form-control {
   flex-shrink: 0;
 }
 
+.sidebar-user-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--danger-500);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.sidebar-logout-btn svg {
+  flex-shrink: 0;
+}
+
+
 /* ————————— Header / Topbar ————————— */
 .topbar {
   height: 64px;

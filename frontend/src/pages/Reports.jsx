@@ -180,21 +180,23 @@ export default function Reports() {
                     <h1 className="page-title">📊 Rapports & Analyses</h1>
                     <p className="page-subtitle">Vue annuelle et export de données</p>
                 </div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <select className="form-control" style={{ width: 90 }} value={year} onChange={e => setYear(+e.target.value)}>
+                <div className="reports-actions">
+                    <select className="form-control" style={{ width: 'auto', minWidth: 100 }} value={year} onChange={e => setYear(+e.target.value)}>
                         {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <button className="btn btn-outline" onClick={exportPDF} disabled={exporting} style={{ gap: 8 }}>
-                        <FileText size={16} /> PDF
-                    </button>
-                    <button className="btn btn-outline" onClick={exportExcel} disabled={exporting} style={{ gap: 8 }}>
-                        <FileSpreadsheet size={16} /> Excel
-                    </button>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button className="btn btn-outline" onClick={exportPDF} disabled={exporting} title="Rapport PDF">
+                            <FileText size={16} /><span className="hidden-mobile">PDF</span>
+                        </button>
+                        <button className="btn btn-outline" onClick={exportExcel} disabled={exporting} title="Export Excel">
+                            <FileSpreadsheet size={16} /><span className="hidden-mobile">Excel</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Year summary */}
-            <div className="grid-4" style={{ marginBottom: 24 }}>
+            <div className="grid-responsive-summary" style={{ marginBottom: 24 }}>
                 {[
                     { label: 'Revenus annuels', value: yearlyData?.yearTotals?.income || 0, color: 'var(--success-500)' },
                     { label: 'Dépenses annuelles', value: yearlyData?.yearTotals?.expenses || 0, color: 'var(--danger-500)' },
@@ -206,7 +208,7 @@ export default function Reports() {
                             : '0%'
                     },
                 ].map(s => (
-                    <div key={s.label} className="card card-body">
+                    <div key={s.label} className="card card-body" style={{ padding: '20px' }}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>{s.label}</div>
                         <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.extra || formatCurrency(s.value, currency)}</div>
                     </div>
@@ -312,7 +314,7 @@ export default function Reports() {
                 </div>
             ) : (
                 /* Category breakdown */
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
+                <div className="reports-breakdown-grid">
                     <div className="card">
                         <div className="card-header">
                             <h3 style={{ fontSize: 15, fontWeight: 700 }}>Dépenses par catégorie — {year}</h3>
@@ -354,7 +356,7 @@ export default function Reports() {
                     </div>
 
                     {/* Donut chart */}
-                    <div className="card card-body" style={{ position: 'sticky', top: 84 }}>
+                    <div className="card card-body reports-donut-card">
                         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Répartition</h3>
                         <div style={{ height: 250 }}>
                             <ResponsiveContainer width="100%" height="100%">

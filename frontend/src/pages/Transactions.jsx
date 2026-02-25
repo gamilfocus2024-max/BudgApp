@@ -101,67 +101,73 @@ export default function Transactions({ type: defaultType = 'all' }) {
             </div>
 
             {/* Summary strip */}
-            <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div className="grid-3 no-stack" style={{ marginBottom: 20 }}>
                 {[
                     { label: 'Total revenus', value: income, color: 'var(--success-500)' },
                     { label: 'Total dépenses', value: expenses, color: 'var(--danger-500)' },
                     { label: 'Solde net', value: income - expenses, color: (income - expenses) >= 0 ? 'var(--success-500)' : 'var(--danger-500)' },
                 ].map(s => (
-                    <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 140 }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</span>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{formatCurrency(s.value, currency)}</span>
+                    <div key={s.label} className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{s.label}</span>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{formatCurrency(s.value, currency)}</span>
                     </div>
                 ))}
             </div>
 
             {/* Filters */}
-            <div className="filters-bar" style={{ marginBottom: 20 }}>
+            <div className="filters-bar">
                 {/* Search */}
-                <div style={{ position: 'relative', flex: '1 1 200px' }}>
-                    <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <div className="filter-item-search">
+                    <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                         className="form-control"
-                        style={{ paddingLeft: 34, minWidth: 0, background: 'var(--bg-input)' }}
+                        style={{ paddingLeft: 38 }}
                         placeholder="Rechercher..."
                         value={filters.search}
                         onChange={e => updateFilter('search', e.target.value)}
                     />
                 </div>
 
-                {/* Type */}
-                {defaultType === 'all' && (
-                    <select className="form-control" style={{ width: 140 }} value={filters.type} onChange={e => updateFilter('type', e.target.value)}>
-                        <option value="">Tous types</option>
-                        <option value="income">Revenus</option>
-                        <option value="expense">Dépenses</option>
+                <div className="filters-row">
+                    {/* Type */}
+                    {defaultType === 'all' && (
+                        <select className="form-control" value={filters.type} onChange={e => updateFilter('type', e.target.value)}>
+                            <option value="">Tous types</option>
+                            <option value="income">Revenus</option>
+                            <option value="expense">Dépenses</option>
+                        </select>
+                    )}
+
+                    {/* Category */}
+                    <select className="form-control" value={filters.category_id} onChange={e => updateFilter('category_id', e.target.value)}>
+                        <option value="">Toutes catégories</option>
+                        {categories.filter(c => !filters.type || c.type === filters.type).map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
                     </select>
-                )}
+                </div>
 
-                {/* Category */}
-                <select className="form-control" style={{ width: 160 }} value={filters.category_id} onChange={e => updateFilter('category_id', e.target.value)}>
-                    <option value="">Toutes catégories</option>
-                    {categories.filter(c => !filters.type || c.type === filters.type).map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                </select>
+                <div className="filters-row">
+                    {/* Date range */}
+                    <input type="date" className="form-control" value={filters.start_date} onChange={e => updateFilter('start_date', e.target.value)} title="Date de début" />
+                    <input type="date" className="form-control" value={filters.end_date} onChange={e => updateFilter('end_date', e.target.value)} title="Date de fin" />
+                </div>
 
-                {/* Date range */}
-                <input type="date" className="form-control" style={{ width: 150 }} value={filters.start_date} onChange={e => updateFilter('start_date', e.target.value)} title="Date de début" />
-                <input type="date" className="form-control" style={{ width: 150 }} value={filters.end_date} onChange={e => updateFilter('end_date', e.target.value)} title="Date de fin" />
+                <div className="filters-row">
+                    {/* Sort */}
+                    <select className="form-control"
+                        value={sortedParts}
+                        onChange={e => {
+                            const [sort, order] = e.target.value.split('-')
+                            setFilters(f => ({ ...f, sort, order }))
+                        }}>
+                        {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
 
-                {/* Sort */}
-                <select className="form-control" style={{ width: 170 }}
-                    value={sortedParts}
-                    onChange={e => {
-                        const [sort, order] = e.target.value.split('-')
-                        setFilters(f => ({ ...f, sort, order }))
-                    }}>
-                    {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-
-                <button className="btn btn-outline btn-sm" onClick={() => setFilters(f => ({ ...f, type: defaultType === 'all' ? '' : defaultType, category_id: '', search: '', start_date: '', end_date: '', sort: 'date', order: 'DESC', page: 1 }))}>
-                    <RefreshCw size={14} /> Réinitialiser
-                </button>
+                    <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setFilters(f => ({ ...f, type: defaultType === 'all' ? '' : defaultType, category_id: '', search: '', start_date: '', end_date: '', sort: 'date', order: 'DESC', page: 1 }))}>
+                        <RefreshCw size={14} />
+                    </button>
+                </div>
             </div>
 
             {/* Table */}

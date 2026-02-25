@@ -130,7 +130,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats cards */}
-            <div className="grid-4" style={{ marginBottom: 28 }}>
+            <div className="stats-grid-4" style={{ marginBottom: 28 }}>
                 <StatCard title="Solde Total" icon={Wallet} color="var(--brand-500)" value={stats?.total?.balance || 0} currency={currency} subtitle="balance" />
                 <StatCard title="Revenus du mois" icon={TrendingUp} color="var(--success-500)" value={stats?.monthly?.income || 0} currency={currency} subtitle="income" />
                 <StatCard title="Dépenses du mois" icon={TrendingDown} color="var(--danger-500)" value={stats?.monthly?.expenses || 0} currency={currency} subtitle="expense" />
@@ -138,7 +138,7 @@ export default function Dashboard() {
             </div>
 
             {/* Main content grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, marginBottom: 24 }}>
+            <div className="dashboard-main-grid">
                 {/* Trend Chart */}
                 <div className="card">
                     <div className="card-header">
@@ -198,7 +198,7 @@ export default function Dashboard() {
             </div>
 
             {/* Bottom grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+            <div className="grid-2 dashboard-bottom-grid">
                 {/* Recent Transactions */}
                 <div className="card">
                     <div className="card-header">

@@ -35,8 +35,9 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
                         Budg<span>App</span>
                     </span>
                 )}
+                {/* X close button only visible on mobile */}
                 <button
-                    className="btn btn-ghost btn-icon btn-sm"
+                    className="btn btn-ghost btn-icon btn-sm sidebar-close-btn"
                     style={{ marginLeft: 'auto', flexShrink: 0 }}
                     onClick={onClose}
                     aria-label="Fermer"

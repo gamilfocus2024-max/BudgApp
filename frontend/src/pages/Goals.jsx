@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, PlusCircle, CheckCircle, Pause, XCircle } from 'lucide-react'
-import api from '../services/api'
+import { getGoals, createGoal, updateGoal, deleteGoal, depositToGoal } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, formatDate, GOAL_STATUS } from '../utils/formatters'
 import toast from 'react-hot-toast'
@@ -19,13 +19,19 @@ export default function Goals() {
     const [depositAmount, setDepositAmount] = useState('')
     const [form, setForm] = useState({ name: '', description: '', target_amount: '', current_amount: '', target_date: '', color: '#6366f1', icon: '🎯' })
 
-    useEffect(() => { fetchGoals() }, [])
-
-    const fetchGoals = async () => {
+    const fetchGoals = useCallback(async () => {
+        if (!user) return
         setLoading(true)
-        try { const res = await api.get('/goals'); setGoals(res.data.goals) } catch { }
+        try {
+            const data = await getGoals(user.uid)
+            setGoals(data)
+        } catch (err) {
+            console.error('Error fetching goals:', err)
+        }
         finally { setLoading(false) }
-    }
+    }, [user])
+
+    useEffect(() => { fetchGoals() }, [fetchGoals])
 
     const openCreate = () => {
         setEditTarget(null)
@@ -35,7 +41,15 @@ export default function Goals() {
 
     const openEdit = (g) => {
         setEditTarget(g)
-        setForm({ name: g.name, description: g.description || '', target_amount: g.targetAmount.toString(), current_amount: g.currentAmount.toString(), target_date: g.targetDate || '', color: g.color, icon: g.icon })
+        setForm({
+            name: g.name,
+            description: g.description || '',
+            target_amount: g.targetAmount.toString(),
+            current_amount: g.currentAmount.toString(),
+            target_date: g.targetDate || '',
+            color: g.color,
+            icon: g.icon
+        })
         setShowModal(true)
     }
 
@@ -44,32 +58,36 @@ export default function Goals() {
         if (!form.name || !form.target_amount) return toast.error('Nom et montant cible requis')
         try {
             if (editTarget) {
-                await api.put(`/goals/${editTarget.id}`, form)
+                await updateGoal(editTarget.id, form)
                 toast.success('Objectif mis à jour !')
             } else {
-                await api.post('/goals', form)
+                await createGoal(user.uid, form)
                 toast.success('Objectif créé ! 🎯')
             }
             setShowModal(false)
             fetchGoals()
-        } catch (err) { toast.error(err.response?.data?.error || 'Erreur') }
+        } catch (err) { toast.error('Erreur lors de la sauvegarde') }
     }
 
     const handleDelete = async (id) => {
         if (!window.confirm('Supprimer cet objectif ?')) return
-        try { await api.delete(`/goals/${id}`); toast.success('Objectif supprimé'); fetchGoals() } catch { }
+        try {
+            await deleteGoal(id)
+            toast.success('Objectif supprimé')
+            fetchGoals()
+        } catch { toast.error('Erreur lors de la suppression') }
     }
 
     const handleDeposit = async () => {
         if (!depositAmount || parseFloat(depositAmount) <= 0) return toast.error('Montant invalide')
         try {
-            const res = await api.patch(`/goals/${showDepositModal.id}/deposit`, { amount: parseFloat(depositAmount) })
+            const res = await depositToGoal(showDepositModal.id, depositAmount)
             toast.success(`Dépôt de ${formatCurrency(depositAmount, currency)} effectué !`)
-            if (res.data.status === 'completed') toast.success('🎉 Objectif atteint ! Félicitations !')
+            if (res.status === 'completed') toast.success('🎉 Objectif atteint ! Félicitations !')
             setShowDepositModal(null)
             setDepositAmount('')
             fetchGoals()
-        } catch (err) { toast.error(err.response?.data?.error || 'Erreur') }
+        } catch (err) { toast.error('Erreur lors du dépôt') }
     }
 
     const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0)

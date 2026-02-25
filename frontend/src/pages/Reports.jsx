@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Download, FileText, FileSpreadsheet, BarChart3, PieChart as PieIcon } from 'lucide-react'
 import {
     BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import api from '../services/api'
+import { getYearlyStats, getCategoryBreakdown, getTransactions } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, monthName, CHART_COLORS, shortMonthName } from '../utils/formatters'
 import toast from 'react-hot-toast'
@@ -22,24 +22,25 @@ export default function Reports() {
     const [loading, setLoading] = useState(true)
     const [exporting, setExporting] = useState(false)
 
-    useEffect(() => {
-        fetchData()
-    }, [year])
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
+        if (!user) return
         setLoading(true)
         try {
             const [yearly, breakdownRes] = await Promise.all([
-                api.get('/stats/yearly', { params: { year } }),
-                api.get('/reports/category-breakdown', {
-                    params: { start_date: `${year}-01-01`, end_date: `${year}-12-31`, type: 'expense' }
+                getYearlyStats(user.uid, year),
+                getCategoryBreakdown(user.uid, {
+                    start_date: `${year}-01-01`, end_date: `${year}-12-31`, type: 'expense'
                 })
             ])
-            setYearlyData(yearly.data)
-            setBreakdown(breakdownRes.data.breakdown)
-        } catch { }
+            setYearlyData(yearly)
+            setBreakdown(breakdownRes.breakdown)
+        } catch (err) {
+            console.error('Error fetching reports:', err)
+        }
         finally { setLoading(false) }
-    }
+    }, [user, year])
+
+    useEffect(() => { fetchData() }, [fetchData])
 
     const exportPDF = async () => {
         setExporting(true)
@@ -113,17 +114,16 @@ export default function Reports() {
         setExporting(true)
         try {
             const { utils, writeFile } = await import('xlsx')
-            const res = await api.get('/reports/export', { params: { start_date: `${year}-01-01`, end_date: `${year}-12-31` } })
-            const txs = res.data.transactions
+            const { transactions: txs } = await getTransactions(user.uid, { limit: 5000 })
 
             const rows = txs.map(t => ({
                 'Date': t.date,
                 'Type': t.type === 'income' ? 'Revenu' : 'Dépense',
                 'Description': t.description,
-                'Catégorie': t.category_name || '',
+                'Catégorie': t.category?.name || '',
                 'Montant': t.amount,
-                'Devise': t.currency,
-                'Moyen de paiement': t.payment_method,
+                'Devise': user?.currency || 'EUR',
+                'Moyen de paiement': t.payment_method || '',
                 'Notes': t.notes || '',
                 'Récurrent': t.is_recurring ? 'Oui' : 'Non'
             }))
@@ -149,19 +149,6 @@ export default function Reports() {
             console.error(err)
             toast.error('Erreur lors de l\'export Excel')
         } finally { setExporting(false) }
-    }
-
-    const exportBackup = async () => {
-        try {
-            const res = await api.get('/reports/backup')
-            const data = JSON.stringify(res.data, null, 2)
-            const blob = new Blob([data], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = `BudgApp_backup_${Date.now()}.json`
-            a.click(); URL.revokeObjectURL(url)
-            toast.success('💾 Sauvegarde téléchargée !')
-        } catch { toast.error('Erreur lors de la sauvegarde') }
     }
 
     const CustomTooltip = ({ active, payload, label }) => {
@@ -202,9 +189,6 @@ export default function Reports() {
                     </button>
                     <button className="btn btn-outline" onClick={exportExcel} disabled={exporting} style={{ gap: 8 }}>
                         <FileSpreadsheet size={16} /> Excel
-                    </button>
-                    <button className="btn btn-outline" onClick={exportBackup} style={{ gap: 8 }}>
-                        <Download size={16} /> Backup
                     </button>
                 </div>
             </div>

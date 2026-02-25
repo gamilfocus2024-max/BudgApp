@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { User, Lock, Globe, Palette, Bell, Database, Plus, Trash2, Save } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { User, Lock, Globe, Palette, Bell, Database, Plus, Trash2, Save, ShieldAlert } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import api from '../services/api'
+import { getCategories, createCategory, deleteCategory } from '../services/db'
+import { seedDefaultCategories } from '../utils/seedFirebase'
 import toast from 'react-hot-toast'
 
 const CURRENCIES = [
@@ -34,7 +35,7 @@ function SettingSection({ title, icon: Icon, children }) {
 }
 
 export default function Settings() {
-    const { user, updateUser, logout } = useAuth()
+    const { user, updateUser, logout, changePassword } = useAuth()
     const { theme, toggleTheme } = useTheme()
     const [profileForm, setProfileForm] = useState({ name: user?.name || '', currency: user?.currency || 'EUR' })
     const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
@@ -43,29 +44,31 @@ export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile')
     const [catForm, setCatForm] = useState({ name: '', type: 'expense', color: '#6366f1', icon: 'tag' })
     const [categories, setCategories] = useState([])
-    const [catLoaded, setCatLoaded] = useState(false)
-    const [backupFile, setBackupFile] = useState(null)
+    const [loadingCats, setLoadingCats] = useState(false)
 
-    const loadCategories = async () => {
-        if (catLoaded) return
+    const loadCategories = useCallback(async () => {
+        if (!user) return
+        setLoadingCats(true)
         try {
-            const res = await api.get('/categories')
-            setCategories(res.data.categories.filter(c => !c.is_default))
-            setCatLoaded(true)
-        } catch { }
-    }
+            const data = await getCategories(user.uid)
+            setCategories(data.filter(c => !c.is_default))
+        } catch (err) {
+            console.error('Error loading cats:', err)
+        } finally { setLoadingCats(false) }
+    }, [user])
+
+    useEffect(() => {
+        if (activeTab === 'categories') loadCategories()
+    }, [activeTab, loadCategories])
 
     const handleProfileSave = async (e) => {
         e.preventDefault()
         setSavingProfile(true)
         try {
-            const res = await api.put('/auth/profile', profileForm)
-            updateUser(res.data.user)
-            // Sync theme preference
-            await api.put('/auth/profile', { ...profileForm, theme })
+            await updateUser({ ...profileForm, theme })
             toast.success('Profil mis à jour !')
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur')
+            toast.error('Erreur lors de la mise à jour')
         } finally { setSavingProfile(false) }
     }
 
@@ -75,11 +78,10 @@ export default function Settings() {
         if (pwdForm.newPassword.length < 8) return toast.error('8 caractères minimum')
         setSavingPwd(true)
         try {
-            await api.put('/auth/password', { currentPassword: pwdForm.currentPassword, newPassword: pwdForm.newPassword })
-            toast.success('Mot de passe changé !')
+            await changePassword(pwdForm.currentPassword, pwdForm.newPassword)
             setPwdForm({ currentPassword: '', newPassword: '', confirm: '' })
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur')
+            toast.error('Mot de passe actuel incorrect ou erreur serveur')
         } finally { setSavingPwd(false) }
     }
 
@@ -87,31 +89,29 @@ export default function Settings() {
         e.preventDefault()
         if (!catForm.name) return toast.error('Nom requis')
         try {
-            await api.post('/categories', catForm)
+            await createCategory(user.uid, catForm)
             toast.success('Catégorie créée !')
-            setCatLoaded(false); loadCategories()
+            loadCategories()
             setCatForm({ name: '', type: 'expense', color: '#6366f1', icon: 'tag' })
-        } catch (err) { toast.error(err.response?.data?.error || 'Erreur') }
+        } catch (err) { toast.error('Erreur lors de la création') }
     }
 
     const handleDeleteCategory = async (id) => {
         if (!window.confirm('Supprimer cette catégorie ?')) return
         try {
-            await api.delete(`/categories/${id}`)
+            await deleteCategory(id)
             toast.success('Catégorie supprimée')
             setCategories(cats => cats.filter(c => c.id !== id))
-        } catch (err) { toast.error(err.response?.data?.error || 'Erreur') }
+        } catch (err) { toast.error('Erreur lors de la suppression') }
     }
 
-    const handleRestore = async () => {
-        if (!backupFile) return toast.error('Sélectionnez un fichier de sauvegarde')
+    const handleSeedCategories = async () => {
+        if (!window.confirm('Amorcer les catégories par défaut ?')) return
         try {
-            const text = await backupFile.text()
-            const data = JSON.parse(text)
-            await api.post('/reports/restore', data)
-            toast.success('Données restaurées avec succès !')
-            setBackupFile(null)
-        } catch { toast.error('Fichier de sauvegarde invalide') }
+            await seedDefaultCategories()
+            toast.success('Catégories amorcées !')
+            if (activeTab === 'categories') loadCategories()
+        } catch (err) { toast.error('Erreur d\'amorçage') }
     }
 
     const TABS = [
@@ -121,6 +121,9 @@ export default function Settings() {
         { key: 'categories', label: '🏷️ Catégories', action: loadCategories },
         { key: 'data', label: '💾 Données', action: null },
     ]
+    if (user?.role === 'admin') {
+        TABS.push({ key: 'admin', label: '👑 Admin', action: null })
+    }
 
     return (
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
@@ -144,7 +147,6 @@ export default function Settings() {
             {/* Profile */}
             {activeTab === 'profile' && (
                 <div>
-                    {/* Avatar section */}
                     <div className="card card-body" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
                         <div className="avatar-placeholder" style={{ width: 72, height: 72, fontSize: 28, borderRadius: 20 }}>
                             {(user?.name || '?')[0].toUpperCase()}
@@ -168,7 +170,6 @@ export default function Settings() {
                             <div className="form-group">
                                 <label className="form-label">Email</label>
                                 <input className="form-control" value={user?.email} disabled style={{ opacity: .6 }} />
-                                <span className="form-hint">L'email ne peut pas être modifié</span>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Devise principale</label>
@@ -199,7 +200,6 @@ export default function Settings() {
                             <label className="form-label">Nouveau mot de passe</label>
                             <input type="password" className="form-control" value={pwdForm.newPassword}
                                 onChange={e => setPwdForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="••••••••" required minLength={8} />
-                            <span className="form-hint">Minimum 8 caractères avec majuscule, minuscule et chiffre</span>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Confirmer le nouveau mot de passe</label>
@@ -220,21 +220,15 @@ export default function Settings() {
                     <div style={{ marginBottom: 20 }}>
                         <label className="form-label" style={{ marginBottom: 12, display: 'block' }}>Thème</label>
                         <div style={{ display: 'flex', gap: 16 }}>
-                            {[
-                                { value: 'light', label: '☀️ Clair', desc: 'Interface lumineuse' },
-                                { value: 'dark', label: '🌙 Sombre', desc: 'Interface sombre' },
-                            ].map(t => (
-                                <div key={t.value}
-                                    onClick={() => { if (theme !== t.value) toggleTheme() }}
+                            {['light', 'dark'].map(t => (
+                                <div key={t}
+                                    onClick={() => { if (theme !== t) toggleTheme() }}
                                     style={{
                                         flex: 1, padding: 16, borderRadius: 12, cursor: 'pointer',
-                                        border: `2px solid ${theme === t.value ? 'var(--brand-500)' : 'var(--border-color)'}`,
-                                        background: theme === t.value ? 'var(--brand-50)' : 'var(--bg-input)',
-                                        transition: 'all .2s'
+                                        border: `2px solid ${theme === t ? 'var(--brand-500)' : 'var(--border-color)'}`,
+                                        background: theme === t ? 'var(--brand-50)' : 'var(--bg-input)',
                                     }}>
-                                    <div style={{ fontSize: 24, marginBottom: 6 }}>{t.value === 'light' ? '☀️' : '🌙'}</div>
-                                    <div style={{ fontWeight: 700, fontSize: 14, color: theme === t.value ? 'var(--brand-500)' : 'var(--text-primary)' }}>{t.value === 'light' ? 'Clair' : 'Sombre'}</div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.desc}</div>
+                                    <div style={{ fontWeight: 700 }}>{t === 'light' ? '☀️ Clair' : '🌙 Sombre'}</div>
                                 </div>
                             ))}
                         </div>
@@ -244,113 +238,50 @@ export default function Settings() {
 
             {/* Categories */}
             {activeTab === 'categories' && (
-                <SettingSection title="Mes catégories personnalisées" icon={Globe}>
+                <SettingSection title="Mes catégories" icon={Globe}>
                     <form onSubmit={handleAddCategory} style={{ marginBottom: 24 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px auto', gap: 12, alignItems: 'end' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Nom</label>
-                                <input className="form-control" placeholder="Ma catégorie" value={catForm.name}
-                                    onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Type</label>
-                                <select className="form-control" value={catForm.type} onChange={e => setCatForm(f => ({ ...f, type: e.target.value }))}>
-                                    <option value="expense">Dépense</option>
-                                    <option value="income">Revenu</option>
-                                </select>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Couleur</label>
-                                <input type="color" className="form-control" style={{ padding: 4, height: 42 }}
-                                    value={catForm.color} onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))} />
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ height: 42, alignSelf: 'flex-end' }}>
-                                <Plus size={16} /> Ajouter
-                            </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px auto', gap: 12 }}>
+                            <input className="form-control" placeholder="Nom" value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} />
+                            <select className="form-control" value={catForm.type} onChange={e => setCatForm(f => ({ ...f, type: e.target.value }))}>
+                                <option value="expense">Dépense</option>
+                                <option value="income">Revenu</option>
+                            </select>
+                            <input type="color" className="form-control" value={catForm.color} onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))} />
+                            <button type="submit" className="btn btn-primary"><Plus size={16} /></button>
                         </div>
                     </form>
-
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
-                        {categories.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 14 }}>
-                                Aucune catégorie personnalisée. Créez-en une ci-dessus.
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {categories.map(c => (
+                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: 'var(--bg-card)', borderRadius: 8 }}>
+                                <div style={{ width: 12, height: 12, borderRadius: '50%', background: c.color }} />
+                                <span style={{ flex: 1 }}>{c.name}</span>
+                                <button className="btn btn-ghost btn-icon" onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button>
                             </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {categories.map(c => (
-                                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--bg-input)' }}>
-                                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{c.name}</span>
-                                        <span className={`badge ${c.type === 'income' ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: 11 }}>
-                                            {c.type === 'income' ? 'Revenu' : 'Dépense'}
-                                        </span>
-                                        <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger-500)' }}
-                                            onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        ))}
                     </div>
                 </SettingSection>
             )}
 
             {/* Data */}
             {activeTab === 'data' && (
-                <div>
-                    <SettingSection title="Sauvegarde & Restauration" icon={Database}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                            <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-color)' }}>
-                                <div style={{ fontWeight: 700, marginBottom: 4 }}>💾 Exporter une sauvegarde</div>
-                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-                                    Téléchargez une copie complète de vos données (transactions, budgets, objectifs)
-                                </p>
-                                <button className="btn btn-outline" onClick={async () => {
-                                    try {
-                                        const res = await api.get('/reports/backup')
-                                        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
-                                        const url = URL.createObjectURL(blob)
-                                        const a = document.createElement('a'); a.href = url; a.download = `budgapp-backup-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url)
-                                        toast.success('Sauvegarde téléchargée !')
-                                    } catch { toast.error('Erreur') }
-                                }}>
-                                    <Database size={16} /> Télécharger la sauvegarde
-                                </button>
-                            </div>
+                <SettingSection title="Gestion des données" icon={Database}>
+                    <button className="btn btn-danger" onClick={logout}>Se déconnecter</button>
+                </SettingSection>
+            )}
 
-                            <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-color)' }}>
-                                <div style={{ fontWeight: 700, marginBottom: 4 }}>📂 Restaurer une sauvegarde</div>
-                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-                                    Importez un fichier de sauvegarde JSON pour restaurer vos données
-                                </p>
-                                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                                    <label style={{ cursor: 'pointer' }}>
-                                        <input type="file" accept=".json" style={{ display: 'none' }}
-                                            onChange={e => setBackupFile(e.target.files[0])} />
-                                        <span className="btn btn-outline">
-                                            📁 Choisir un fichier
-                                        </span>
-                                    </label>
-                                    {backupFile && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>📄 {backupFile.name}</span>}
-                                    {backupFile && (
-                                        <button className="btn btn-success" onClick={handleRestore}>
-                                            Restaurer
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--danger-500)', background: 'rgba(239,68,68,.05)' }}>
-                                <div style={{ fontWeight: 700, color: 'var(--danger-500)', marginBottom: 4 }}>⚠️ Zone de danger</div>
-                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-                                    La déconnexion supprime votre session locale. Vos données restent sécurisées.
-                                </p>
-                                <button className="btn btn-danger btn-sm" onClick={logout}>
-                                    Se déconnecter
-                                </button>
-                            </div>
-                        </div>
-                    </SettingSection>
-                </div>
+            {/* Admin */}
+            {activeTab === 'admin' && (
+                <SettingSection title="Administration" icon={ShieldAlert}>
+                    <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ marginBottom: 8 }}>Initialisation de la base de données</h4>
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                            Cette action créera les catégories par défaut dans Firestore si elles n'existent pas déjà.
+                        </p>
+                        <button className="btn btn-primary" onClick={handleSeedCategories}>
+                            🚀 Amorcer les catégories par défaut
+                        </button>
+                    </div>
+                </SettingSection>
             )}
         </div>
     )

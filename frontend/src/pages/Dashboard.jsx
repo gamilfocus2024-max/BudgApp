@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, ArrowRight, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import api from '../services/api'
+import { getDashboardStats } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, formatDate, healthLabel, shortMonthName, CHART_COLORS } from '../utils/formatters'
 
@@ -76,22 +76,28 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true)
     const currency = user?.currency || 'EUR'
 
+    const fetchStats = useCallback(async () => {
+        if (!user) return
+        try {
+            const data = await getDashboardStats(user.uid)
+            setStats(data)
+        } catch (err) {
+            console.error('Error fetching dashboard stats:', err)
+        }
+        finally { setLoading(false) }
+    }, [user])
+
     useEffect(() => {
         fetchStats()
+    }, [fetchStats])
+
+    useEffect(() => {
         const handler = () => fetchStats()
         window.addEventListener('transaction-saved', handler)
         return () => window.removeEventListener('transaction-saved', handler)
-    }, [])
+    }, [fetchStats])
 
-    const fetchStats = async () => {
-        try {
-            const res = await api.get('/stats/dashboard')
-            setStats(res.data)
-        } catch { }
-        finally { setLoading(false) }
-    }
-
-    if (loading) return (
+    if (loading || !stats) return (
         <div className="loading-overlay" style={{ minHeight: '60vh' }}>
             <div style={{ textAlign: 'center' }}>
                 <div className="spinner" style={{ width: 40, height: 40, margin: '0 auto 12px' }} />

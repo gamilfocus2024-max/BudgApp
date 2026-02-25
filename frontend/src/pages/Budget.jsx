@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import api from '../services/api'
+import { getBudgets, createBudget, updateBudget, deleteBudget, getCategories } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, monthName, CHART_COLORS } from '../utils/formatters'
 import toast from 'react-hot-toast'
@@ -20,19 +20,23 @@ export default function Budget() {
     const [form, setForm] = useState({ name: '', amount: '', category_id: '', alert_threshold: 80 })
 
     useEffect(() => {
-        api.get('/categories?type=expense').then(r => setCategories(r.data.categories)).catch(() => { })
-    }, [])
+        if (!user) return
+        getCategories(user.uid).then(cats => setCategories(cats.filter(c => c.type === 'expense'))).catch(() => { })
+    }, [user])
 
-    useEffect(() => { fetchBudgets() }, [year, month])
-
-    const fetchBudgets = async () => {
+    const fetchBudgets = useCallback(async () => {
+        if (!user) return
         setLoading(true)
         try {
-            const res = await api.get('/budgets', { params: { year, month } })
-            setBudgets(res.data.budgets)
-        } catch { }
+            const data = await getBudgets(user.uid, { year, month })
+            setBudgets(data)
+        } catch (err) {
+            console.error('Error fetching budgets:', err)
+        }
         finally { setLoading(false) }
-    }
+    }, [user, year, month])
+
+    useEffect(() => { fetchBudgets() }, [fetchBudgets])
 
     const openCreate = () => {
         setEditTarget(null)
@@ -51,26 +55,28 @@ export default function Budget() {
         if (!form.name || !form.amount || !form.category_id) return toast.error('Remplissez tous les champs requis')
         try {
             if (editTarget) {
-                await api.put(`/budgets/${editTarget.id}`, form)
+                await updateBudget(editTarget.id, form)
                 toast.success('Budget mis à jour !')
             } else {
-                await api.post('/budgets', { ...form, month, year })
+                await createBudget(user.uid, { ...form, month, year })
                 toast.success('Budget créé !')
             }
             setShowModal(false)
             fetchBudgets()
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur')
+            toast.error('Erreur lors de la sauvegarde')
         }
     }
 
     const handleDelete = async (id) => {
         if (!window.confirm('Supprimer ce budget ?')) return
         try {
-            await api.delete(`/budgets/${id}`)
+            await deleteBudget(id)
             toast.success('Budget supprimé')
             fetchBudgets()
-        } catch { }
+        } catch {
+            toast.error('Erreur lors de la suppression')
+        }
     }
 
     const totalBudget = budgets.reduce((s, b) => s + b.amount, 0)

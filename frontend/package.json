@@ -13,6 +13,7 @@
         "budg": "file:..",
         "clsx": "^2.1.0",
         "date-fns": "^3.6.0",
+        "firebase": "^12.9.0",
         "jspdf": "^2.5.1",
         "jspdf-autotable": "^3.8.2",
         "lucide-react": "^0.344.0",

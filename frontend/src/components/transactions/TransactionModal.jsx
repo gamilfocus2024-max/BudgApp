@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Save, Calendar, Tag, CreditCard, AlignLeft, RefreshCw, DollarSign, Paperclip, FileText } from 'lucide-react'
-import api from '../../services/api'
+import { getCategories, createTransaction, updateTransaction } from '../../services/db'
+import { storage } from '../../services/firebase'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { PAYMENT_METHODS, RECURRING_INTERVALS } from '../../utils/formatters'
@@ -15,21 +17,22 @@ export default function TransactionModal({ transaction, defaultType, onClose, on
     const [receiptFile, setReceiptFile] = useState(null)
     const [form, setForm] = useState({
         type: transaction?.type || defaultType || 'expense',
-        amount: transaction?.amount?.toString() || '',
+        amount: transaction?.amount || '',
         description: transaction?.description || '',
         notes: transaction?.notes || '',
         date: transaction?.date || new Date().toISOString().split('T')[0],
-        category_id: transaction?.category?.id || '',
-        payment_method: transaction?.paymentMethod || 'card',
-        is_recurring: transaction?.isRecurring || false,
-        recurring_interval: transaction?.recurringInterval || 'monthly',
+        category_id: transaction?.category_id || '',
+        payment_method: transaction?.payment_method || 'card',
+        is_recurring: transaction?.is_recurring || false,
+        recurring_interval: transaction?.recurring_interval || 'monthly',
         currency: transaction?.currency || user?.currency || 'EUR',
     })
     const [errors, setErrors] = useState({})
 
     useEffect(() => {
-        api.get('/categories').then(res => setCategories(res.data.categories)).catch(() => { })
-    }, [])
+        if (!user) return
+        getCategories(user.uid).then(setCategories).catch(() => { })
+    }, [user])
 
     const filteredCategories = categories.filter(c => c.type === form.type)
 
@@ -47,32 +50,35 @@ export default function TransactionModal({ transaction, defaultType, onClose, on
         return Object.keys(errs).length === 0
     }
 
+    const uploadReceipt = async (file) => {
+        const fileRef = ref(storage, `receipts/${user.uid}/${Date.now()}_${file.name}`)
+        const snapshot = await uploadBytes(fileRef, file)
+        return await getDownloadURL(snapshot.ref)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!validate()) return
 
         setLoading(true)
         try {
-            const formData = new FormData()
-            Object.entries(form).forEach(([k, v]) => {
-                if (v !== null && v !== undefined) formData.append(k, v)
-            })
-            if (receiptFile) formData.append('receipt', receiptFile)
+            const data = { ...form, amount: parseFloat(form.amount) }
+
+            if (receiptFile) {
+                data.receipt_url = await uploadReceipt(receiptFile)
+            }
 
             if (transaction?.id) {
-                await api.put(`/transactions/${transaction.id}`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                })
+                await updateTransaction(transaction.id, data)
                 toast.success('Transaction mise à jour !')
             } else {
-                await api.post('/transactions', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                })
+                await createTransaction(user.uid, data)
                 toast.success(form.type === 'income' ? '💰 Revenu ajouté !' : '💸 Dépense ajoutée !')
             }
             onSaved?.()
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur lors de la sauvegarde')
+            console.error('Error saving transaction:', err)
+            toast.error('Erreur lors de la sauvegarde')
         } finally {
             setLoading(false)
         }

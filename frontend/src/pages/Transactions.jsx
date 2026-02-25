@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Search, Filter, Edit2, Trash2, TrendingUp, TrendingDown, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
-import api from '../services/api'
+import { getTransactions, deleteTransaction, getCategories } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, formatDate, PAYMENT_METHODS } from '../utils/formatters'
 import TransactionModal from '../components/transactions/TransactionModal'
@@ -33,46 +33,50 @@ export default function Transactions({ type: defaultType = 'all' }) {
         sort: 'date',
         order: 'DESC',
         page: 1,
-        limit: 20
+        limit: 50 // Augmenté pour Firebase car on gère mieux côté client si besoin
     })
 
     const currency = user?.currency || 'EUR'
 
     useEffect(() => {
-        api.get('/categories').then(r => setCategories(r.data.categories)).catch(() => { })
-    }, [])
+        if (!user) return
+        getCategories(user.uid).then(setCategories).catch(() => { })
+    }, [user])
+
+    const fetchTransactions = useCallback(async () => {
+        if (!user) return
+        setLoading(true)
+        try {
+            const res = await getTransactions(user.uid, filters)
+            setTransactions(res.transactions)
+            setPagination(res.pagination)
+        } catch (err) {
+            console.error('Error fetching transactions:', err)
+            toast.error('Erreur lors du chargement des transactions')
+        }
+        finally { setLoading(false) }
+    }, [user, filters])
 
     useEffect(() => {
         fetchTransactions()
-    }, [filters])
+    }, [fetchTransactions])
 
     useEffect(() => {
         const handler = () => fetchTransactions()
         window.addEventListener('transaction-saved', handler)
         return () => window.removeEventListener('transaction-saved', handler)
-    }, [])
-
-    const fetchTransactions = useCallback(async () => {
-        setLoading(true)
-        try {
-            const params = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
-            const res = await api.get('/transactions', { params })
-            setTransactions(res.data.transactions)
-            setPagination(res.data.pagination)
-        } catch { }
-        finally { setLoading(false) }
-    }, [filters])
+    }, [fetchTransactions])
 
     const updateFilter = (key, value) => setFilters(f => ({ ...f, [key]: value, page: 1 }))
 
     const handleDelete = async (id) => {
         if (!window.confirm('Supprimer cette transaction ?')) return
         try {
-            await api.delete(`/transactions/${id}`)
+            await deleteTransaction(id)
             toast.success('Transaction supprimée')
             fetchTransactions()
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur')
+            toast.error('Erreur lors de la suppression')
         }
     }
 

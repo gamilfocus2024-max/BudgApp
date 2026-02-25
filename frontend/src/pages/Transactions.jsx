@@ -108,16 +108,38 @@ export default function Transactions({ type: defaultType = 'all' }) {
 
             {/* Summary strip */}
             <div className="grid-3 no-stack" style={{ marginBottom: 20 }}>
-                {[
-                    { label: 'Total revenus', value: income, color: 'var(--success-500)' },
-                    { label: 'Total dépenses', value: expenses, color: 'var(--danger-500)' },
-                    { label: 'Solde net', value: income - expenses, color: (income - expenses) >= 0 ? 'var(--success-500)' : 'var(--danger-500)' },
-                ].map(s => (
-                    <div key={s.label} className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{s.label}</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{formatCurrency(s.value, currency)}</span>
-                    </div>
-                ))}
+                {defaultType === 'all' ? (
+                    <>
+                        <div className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total revenus</span>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--success-500)' }}>{formatCurrency(income, currency)}</span>
+                        </div>
+                        <div className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total dépenses</span>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--danger-500)' }}>{formatCurrency(expenses, currency)}</span>
+                        </div>
+                        <div className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Solde net</span>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: (income - expenses) >= 0 ? 'var(--success-500)' : 'var(--danger-500)' }}>{formatCurrency(income - expenses, currency)}</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                                {defaultType === 'income' ? 'Total des revenus' : 'Total des dépenses'}
+                            </span>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: defaultType === 'income' ? 'var(--success-500)' : 'var(--danger-500)' }}>
+                                {formatCurrency(defaultType === 'income' ? income : expenses, currency)}
+                            </span>
+                        </div>
+                        <div className="card card-body" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Nombre de transactions</span>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand-500)' }}>{pagination.total}</span>
+                        </div>
+                        <div style={{ flex: 1 }} /> {/* Spacer to keep 3 cols layout if needed or just empty */}
+                    </>
+                )}
             </div>
 
             {/* Filters */}

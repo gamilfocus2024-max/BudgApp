@@ -75,6 +75,17 @@ export default function Login() {
             {/* Form */}
             <div className="auth-right">
                 <div className="auth-card">
+                    {/* Mobile Logo Only */}
+                    <div className="hidden-desktop" style={{ textAlign: 'center', marginBottom: 32 }}>
+                        <div style={{
+                            width: 56, height: 56, borderRadius: 16,
+                            background: 'var(--brand-500)', color: 'white',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 12px', fontSize: 24, fontWeight: 900
+                        }}>B</div>
+                        <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--brand-500)' }}>BudgApp</h1>
+                    </div>
+
                     <div style={{ marginBottom: 32 }}>
                         <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Connexion</h2>
                         <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>

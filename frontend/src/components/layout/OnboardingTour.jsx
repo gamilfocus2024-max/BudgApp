@@ -86,13 +86,21 @@ export default function OnboardingTour() {
     const targetEl = step?.target !== 'body' ? document.querySelector(step?.target) : null
     const targetRect = targetEl?.getBoundingClientRect()
 
+    const isMobile = window.innerWidth <= 768
+
     const getTooltipStyle = () => {
+        if (isMobile && step?.position !== 'center') {
+            // CSS handles fixed bottom positioning for mobile via className
+            return { position: 'fixed', zIndex: 1001 }
+        }
+
         if (step?.position === 'center' || !targetRect) {
             return {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                position: 'fixed'
+                position: 'fixed',
+                zIndex: 1001
             }
         }
 
@@ -123,7 +131,7 @@ export default function OnboardingTour() {
                 <div className="tour-overlay">
                     {targetRect && (
                         <div
-                            className="tour-highlight"
+                            className="tour-highlight pulse"
                             style={{
                                 top: targetRect.top - 8,
                                 left: targetRect.left - 8,
@@ -133,26 +141,31 @@ export default function OnboardingTour() {
                         />
                     )}
 
-                    <div className="tour-tooltip" style={getTooltipStyle()}>
+                    <div className={`tour-tooltip ${isMobile ? 'mobile-tour' : ''}`} style={getTooltipStyle()}>
                         <div className="tour-tooltip-header">
                             <h3>{step.title}</h3>
-                            <button className="btn-close" onClick={handleClose}><X size={16} /></button>
+                            <button className="btn-close" onClick={handleClose} style={{ padding: 4 }}><X size={18} /></button>
                         </div>
                         <div className="tour-tooltip-body">
                             <p>{step.content}</p>
                         </div>
                         <div className="tour-tooltip-footer">
                             <div className="tour-progress">
-                                {currentStep + 1} / {TOUR_STEPS.length}
+                                {currentStep + 1} <span style={{ opacity: .5 }}>/ {TOUR_STEPS.length}</span>
                             </div>
                             <div className="tour-btns">
                                 {currentStep > 0 && (
-                                    <button className="btn btn-ghost btn-sm" onClick={handlePrev}>
-                                        <ChevronLeft size={16} /> Précédent
+                                    <button className="btn btn-ghost btn-sm" onClick={handlePrev} style={{ padding: '8px 12px' }}>
+                                        <ChevronLeft size={18} />
+                                        <span className="hidden-mobile">Précédent</span>
                                     </button>
                                 )}
-                                <button className="btn btn-primary btn-sm" onClick={handleNext}>
-                                    {currentStep === TOUR_STEPS.length - 1 ? 'Terminer' : 'Suivant'} <ChevronRight size={16} />
+                                <button className="btn btn-primary btn-sm" onClick={handleNext} style={{ padding: '8px 16px', fontWeight: 700 }}>
+                                    {currentStep === TOUR_STEPS.length - 1 ? (
+                                        <>Terminer <CheckCircle2 size={16} style={{ marginLeft: 6 }} /></>
+                                    ) : (
+                                        <>Suivant <ChevronRight size={18} style={{ marginLeft: 4 }} /></>
+                                    )}
                                 </button>
                             </div>
                         </div>

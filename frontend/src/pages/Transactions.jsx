@@ -61,6 +61,12 @@ export default function Transactions({ type: defaultType = 'all' }) {
         fetchTransactions()
     }, [fetchTransactions])
 
+    // Sync filters when the route type change (income <-> expenses)
+    useEffect(() => {
+        const newType = defaultType === 'all' ? '' : defaultType
+        setFilters(f => ({ ...f, type: newType, page: 1 }))
+    }, [defaultType])
+
     useEffect(() => {
         const handler = () => fetchTransactions()
         window.addEventListener('transaction-saved', handler)

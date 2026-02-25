@@ -47,57 +47,71 @@ export const deleteCategory = async (id) => {
 
 // TRANSACTIONS
 export const getTransactions = async (userId, filters = {}) => {
-    let q = query(
-        collection(db, 'transactions'),
-        where('user_id', '==', userId)
-    );
-
-    if (filters.type) {
-        q = query(q, where('type', '==', filters.type));
-    }
-    if (filters.category_id) {
-        q = query(q, where('category_id', '==', filters.category_id));
-    }
-    if (filters.payment_method) {
-        q = query(q, where('payment_method', '==', filters.payment_method));
-    }
-
-    // Sort and Pagination
-    const sortBy = filters.sort || 'date';
-    const sortOrder = filters.order === 'ASC' ? 'asc' : 'desc';
-    q = query(q, orderBy(sortBy, sortOrder));
-
-    if (filters.limit) {
-        q = query(q, firestoreLimit(filters.limit));
-    }
-
-    const snapshot = await getDocs(q);
-    let results = snapshotToArray(snapshot);
-
-    // Client-side filtering for things Firestore doesn't handle easily without indexes
-    if (filters.search) {
-        const search = filters.search.toLowerCase();
-        results = results.filter(t =>
-            t.description?.toLowerCase().includes(search) ||
-            t.notes?.toLowerCase().includes(search)
+    try {
+        // Simple query that only requires user_id index (default)
+        let q = query(
+            collection(db, 'transactions'),
+            where('user_id', '==', userId)
         );
-    }
 
-    if (filters.start_date) {
-        results = results.filter(t => t.date >= filters.start_date);
-    }
-    if (filters.end_date) {
-        results = results.filter(t => t.date <= filters.end_date);
-    }
+        // Fetch all user transactions (or limit them)
+        // Note: For large datasets, we would need composite indexes.
+        // For now, fetching them and filtering client-side is more robust against index errors.
+        const snapshot = await getDocs(q);
+        let results = snapshotToArray(snapshot);
 
-    return {
-        transactions: results,
-        pagination: {
-            total: results.length,
-            page: filters.page || 1,
-            pages: 1 // Simplified for now
+        // Client-side Filtering
+        if (filters.type) {
+            results = results.filter(t => t.type === filters.type);
         }
-    };
+        if (filters.category_id) {
+            results = results.filter(t => t.category_id === filters.category_id);
+        }
+        if (filters.payment_method) {
+            results = results.filter(t => t.paymentMethod === filters.payment_method || t.payment_method === filters.payment_method);
+        }
+        if (filters.search) {
+            const search = filters.search.toLowerCase();
+            results = results.filter(t =>
+                t.description?.toLowerCase().includes(search) ||
+                t.notes?.toLowerCase().includes(search)
+            );
+        }
+        if (filters.start_date) {
+            results = results.filter(t => t.date >= filters.start_date);
+        }
+        if (filters.end_date) {
+            results = results.filter(t => t.date <= filters.end_date);
+        }
+
+        // Sorting
+        const sortBy = filters.sort || 'date';
+        const sortOrder = filters.order === 'ASC' ? 1 : -1;
+
+        results.sort((a, b) => {
+            const valA = a[sortBy] || '';
+            const valB = b[sortBy] || '';
+            if (valA < valB) return -1 * sortOrder;
+            if (valA > valB) return 1 * sortOrder;
+            return 0;
+        });
+
+        // Pagination (Client-side simulation)
+        const limit = filters.limit || 50;
+        const page = filters.page || 1;
+        const total = results.length;
+        const pages = Math.ceil(total / limit) || 1;
+        const start = (page - 1) * limit;
+        const paginatedResults = results.slice(start, start + limit);
+
+        return {
+            transactions: paginatedResults,
+            pagination: { total, page, pages }
+        };
+    } catch (error) {
+        console.error("Firestore getTransactions Error:", error);
+        throw error;
+    }
 };
 
 export const createTransaction = async (userId, data) => {

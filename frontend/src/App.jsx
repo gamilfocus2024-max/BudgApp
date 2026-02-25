@@ -39,9 +39,9 @@ export default function App() {
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="transactions" element={<Transactions type="all" />} />
-                <Route path="income" element={<Transactions type="income" />} />
-                <Route path="expenses" element={<Transactions type="expense" />} />
+                <Route path="transactions" element={<Transactions key="all" type="all" />} />
+                <Route path="income" element={<Transactions key="income" type="income" />} />
+                <Route path="expenses" element={<Transactions key="expenses" type="expense" />} />
                 <Route path="budget" element={<Budget />} />
                 <Route path="goals" element={<Goals />} />
                 <Route path="reports" element={<Reports />} />

@@ -93,42 +93,40 @@ export default function Budget() {
                     <h1 className="page-title">🏦 Budgets</h1>
                     <p className="page-subtitle">{monthName(month, year)}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="budget-header-actions">
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <select className="form-control" style={{ width: 120 }} value={month} onChange={e => setMonth(+e.target.value)}>
+                        <select className="form-control" style={{ width: 110 }} value={month} onChange={e => setMonth(+e.target.value)}>
                             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                                 <option key={m} value={m}>{monthName(m, year).split(' ')[0]}</option>
                             ))}
                         </select>
-                        <select className="form-control" style={{ width: 90 }} value={year} onChange={e => setYear(+e.target.value)}>
+                        <select className="form-control" style={{ width: 84 }} value={year} onChange={e => setYear(+e.target.value)}>
                             {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
                     </div>
-                    <button className="btn btn-primary" onClick={openCreate}>
-                        <Plus size={18} /> Nouveau budget
+                    <button className="btn btn-primary btn-sm" onClick={openCreate}>
+                        <Plus size={16} /> <span>Nouveau budget</span>
                     </button>
                 </div>
             </div>
 
             {/* Summary */}
-            <div className="grid-4" style={{ marginBottom: 24 }}>
+            <div className="budget-stats-grid" style={{ marginBottom: 20 }}>
                 {[
                     { label: 'Budget total', value: formatCurrency(totalBudget, currency), icon: '💰', color: 'var(--brand-500)' },
                     { label: 'Total dépensé', value: formatCurrency(totalSpent, currency), icon: '💸', color: 'var(--danger-500)' },
-                    { label: 'Dépassements', value: `${exceeded} budget${exceeded > 1 ? 's' : ''}`, icon: '⚠️', color: 'var(--danger-500)' },
-                    { label: 'Alertes actives', value: `${warning} budget${warning > 1 ? 's' : ''}`, icon: '🔔', color: 'var(--warning-500)' },
+                    { label: 'Dépassements', value: `${exceeded}`, icon: '⚠️', color: 'var(--danger-500)' },
+                    { label: 'Alertes actives', value: `${warning}`, icon: '🔔', color: 'var(--warning-500)' },
                 ].map(s => (
-                    <div key={s.label} className="card card-body" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ fontSize: 28 }}>{s.icon}</div>
-                        <div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{s.label}</div>
-                        </div>
+                    <div key={s.label} className="card budget-stat-card">
+                        <div style={{ fontSize: 22, lineHeight: 1, marginBottom: 6 }}>{s.icon}</div>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: s.color, lineHeight: 1.2 }}>{s.value}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{s.label}</div>
                     </div>
                 ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+            <div className="budget-main-layout">
                 {/* Budget list */}
                 <div>
                     {loading ? (
@@ -160,7 +158,7 @@ export default function Budget() {
                                                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.category?.name || 'Sans catégorie'}</div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                             {b.isExceeded && (
                                                 <span className="badge badge-danger"><AlertTriangle size={11} /> Dépassé</span>
                                             )}
@@ -205,7 +203,7 @@ export default function Budget() {
 
                 {/* Pie Chart */}
                 {pieData.length > 0 && (
-                    <div className="card card-body" style={{ position: 'sticky', top: 84 }}>
+                    <div className="card card-body budget-pie-card">
                         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Répartition des dépenses</h3>
                         <div style={{ height: 220 }}>
                             <ResponsiveContainer width="100%" height="100%">

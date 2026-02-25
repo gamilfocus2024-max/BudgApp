@@ -1579,7 +1579,80 @@ textarea.form-control {
   margin: 4px 0;
 }
 
-/* ————————— Responsive ————————— */
+/* ————————— Reports Page ————————— */
+.reports-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 4-col stats grid for Reports */
+.reports-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.reports-stat-card {
+  padding: 16px 14px;
+}
+
+.reports-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reports-stat-value {
+  font-size: clamp(1rem, 3.5vw, 1.4rem);
+  font-weight: 900;
+  font-family: var(--font-display);
+  line-height: 1.1;
+  word-break: break-word;
+}
+
+/* ————————— Budget Page ————————— */
+.budget-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 4-col stats for Budget, 2-col on mobile */
+.budget-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.budget-stat-card {
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Desktop: list + pie side by side */
+.budget-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.budget-pie-card {
+  position: sticky;
+  top: 84px;
+}
+
+
 /* ————————— Mobile Overlay ————————— */
 .mobile-overlay {
   position: fixed;
@@ -1706,6 +1779,25 @@ textarea.form-control {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  /* Reports stats: 2 per row on tablet */
+  .reports-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Budget stat cards: 2 per row on tablet */
+  .budget-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Budget main layout: single col on tablet */
+  .budget-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-pie-card {
+    position: static;
+  }
 }
 
 /* ————————— Tablet/Mobile (≤900px) ————————— */
@@ -1767,6 +1859,37 @@ textarea.form-control {
   .stats-grid-4 {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px;
+  }
+
+  /* Reports stats: 2-col on phones */
+  .reports-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .reports-stat-card {
+    padding: 12px 10px;
+  }
+
+  .reports-stat-value {
+    font-size: clamp(.9rem, 4vw, 1.2rem);
+  }
+
+  /* Budget stats: 2-col on phones */
+  .budget-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .budget-stat-card {
+    padding: 12px 10px;
+  }
+
+  /* Reports + Budget header actions on mobile */
+  .reports-actions-bar,
+  .budget-header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .grid-responsive-summary {

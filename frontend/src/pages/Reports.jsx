@@ -180,23 +180,23 @@ export default function Reports() {
                     <h1 className="page-title">📊 Rapports & Analyses</h1>
                     <p className="page-subtitle">Vue annuelle et export de données</p>
                 </div>
-                <div className="reports-actions">
-                    <select className="form-control" style={{ width: 'auto', minWidth: 100 }} value={year} onChange={e => setYear(+e.target.value)}>
+                <div className="reports-actions-bar">
+                    <select className="form-control" style={{ width: 'auto', minWidth: 90 }} value={year} onChange={e => setYear(+e.target.value)}>
                         {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        <button className="btn btn-outline" onClick={exportPDF} disabled={exporting} title="Rapport PDF">
-                            <FileText size={16} /><span className="hidden-mobile">PDF</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-outline btn-sm" onClick={exportPDF} disabled={exporting} title="Rapport PDF">
+                            <FileText size={15} /><span className="hidden-mobile">PDF</span>
                         </button>
-                        <button className="btn btn-outline" onClick={exportExcel} disabled={exporting} title="Export Excel">
-                            <FileSpreadsheet size={16} /><span className="hidden-mobile">Excel</span>
+                        <button className="btn btn-outline btn-sm" onClick={exportExcel} disabled={exporting} title="Export Excel">
+                            <FileSpreadsheet size={15} /><span className="hidden-mobile">Excel</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Year summary */}
-            <div className="grid-responsive-summary" style={{ marginBottom: 24 }}>
+            <div className="reports-stats-grid" style={{ marginBottom: 20 }}>
                 {[
                     { label: 'Revenus annuels', value: yearlyData?.yearTotals?.income || 0, color: 'var(--success-500)' },
                     { label: 'Dépenses annuelles', value: yearlyData?.yearTotals?.expenses || 0, color: 'var(--danger-500)' },
@@ -208,20 +208,23 @@ export default function Reports() {
                             : '0%'
                     },
                 ].map(s => (
-                    <div key={s.label} className="card card-body" style={{ padding: '20px' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>{s.label}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.extra || formatCurrency(s.value, currency)}</div>
+                    <div key={s.label} className="card reports-stat-card">
+                        <div className="reports-stat-label">{s.label}</div>
+                        <div className="reports-stat-value" style={{ color: s.color }}>
+                            {s.extra || formatCurrency(s.value, currency)}
+                        </div>
                     </div>
                 ))}
             </div>
 
             {/* Tabs */}
-            <div className="tabs" style={{ marginBottom: 24 }}>
+            <div className="tabs" style={{ marginBottom: 20, width: '100%' }}>
                 {[
-                    { key: 'overview', label: '📈 Évolution', Icon: BarChart3 },
-                    { key: 'breakdown', label: '🍕 Catégories', Icon: PieIcon },
+                    { key: 'overview', label: '📈 Évolution' },
+                    { key: 'breakdown', label: '🍕 Catégories' },
                 ].map(t => (
-                    <button key={t.key} className={`tab-item${activeTab === t.key ? ' active' : ''}`} onClick={() => setActiveTab(t.key)}>
+                    <button key={t.key} className={`tab-item${activeTab === t.key ? ' active' : ''}`} onClick={() => setActiveTab(t.key)}
+                        style={{ flex: 1, textAlign: 'center' }}>
                         {t.label}
                     </button>
                 ))}

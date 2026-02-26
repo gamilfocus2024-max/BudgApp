@@ -102,6 +102,12 @@ export default function Reports() {
                 margin: { left: 14, right: 14 },
             })
 
+            // Footer
+            const finalDocY = doc.lastAutoTable?.finalY + 20
+            doc.setFontSize(10)
+            doc.setTextColor(150)
+            doc.text('Application développée par ELGHIATI Zakaria', pageWidth / 2, finalDocY, { align: 'center' })
+
             doc.save(`BudgApp_Rapport_${year}.pdf`)
             toast.success('📄 PDF téléchargé !')
         } catch (err) {
@@ -139,6 +145,8 @@ export default function Reports() {
                 { 'Indicateur': 'Total Revenus', 'Valeur': tot?.income || 0 },
                 { 'Indicateur': 'Total Dépenses', 'Valeur': tot?.expenses || 0 },
                 { 'Indicateur': 'Solde Net', 'Valeur': tot?.balance || 0 },
+                { 'Indicateur': '', 'Valeur': '' },
+                { 'Indicateur': 'Développé par', 'Valeur': 'ELGHIATI Zakaria' }
             ]
             const ws2 = utils.json_to_sheet(summaryRows)
             utils.book_append_sheet(wb, ws2, 'Résumé')

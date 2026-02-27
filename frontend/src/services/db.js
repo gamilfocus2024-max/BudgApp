@@ -41,6 +41,11 @@ export const createCategory = async (userId, data) => {
     return { id: docRef.id, ...data };
 };
 
+export const updateCategory = async (id, data) => {
+    const docRef = doc(db, 'categories', id);
+    await updateDoc(docRef, { ...data, updatedAt: new Date().toISOString() });
+};
+
 export const deleteCategory = async (id) => {
     await deleteDoc(doc(db, 'categories', id));
 };
@@ -436,4 +441,27 @@ export const getDashboardStats = async (userId) => {
             progress: g.target_amount > 0 ? Math.round((g.current_amount / g.target_amount) * 100) : 0
         }))
     };
+};
+// AUTH & USER DATA MGMT
+export const resetUserData = async (userId) => {
+    try {
+        const collectionsToDelete = ['transactions', 'budgets', 'goals', 'categories'];
+
+        for (const colName of collectionsToDelete) {
+            let q = query(collection(db, colName), where('user_id', '==', userId));
+
+            // For categories, don't delete defaults
+            if (colName === 'categories') {
+                q = query(collection(db, colName), where('user_id', '==', userId), where('is_default', '==', false));
+            }
+
+            const snapshot = await getDocs(q);
+            const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+            await Promise.all(deletePromises);
+        }
+        return true;
+    } catch (error) {
+        console.error("Error resetting user data:", error);
+        throw error;
+    }
 };

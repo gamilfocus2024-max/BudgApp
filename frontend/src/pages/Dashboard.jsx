@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, ArrowRight, RefreshCw } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, PiggyBank, ArrowRight, RefreshCw, Edit2, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { getDashboardStats } from '../services/db'
+import { getDashboardStats, deleteTransaction } from '../services/db'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, formatDate, healthLabel, shortMonthName, CHART_COLORS } from '../utils/formatters'
+import TransactionModal from '../components/transactions/TransactionModal'
+import toast from 'react-hot-toast'
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
 
@@ -74,6 +76,8 @@ export default function Dashboard() {
     const { user } = useAuth()
     const [stats, setStats] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [showModal, setShowModal] = useState(false)
+    const [editTarget, setEditTarget] = useState(null)
     const currency = user?.currency || 'EUR'
 
     const fetchStats = useCallback(async () => {
@@ -96,6 +100,17 @@ export default function Dashboard() {
         window.addEventListener('transaction-saved', handler)
         return () => window.removeEventListener('transaction-saved', handler)
     }, [fetchStats])
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Supprimer cette transaction ?')) return
+        try {
+            await deleteTransaction(id)
+            toast.success('Transaction supprimée')
+            fetchStats()
+        } catch (err) {
+            toast.error('Erreur lors de la suppression')
+        }
+    }
 
     if (loading || !stats) return (
         <div className="loading-overlay" style={{ minHeight: '60vh' }}>
@@ -228,8 +243,18 @@ export default function Dashboard() {
                                             <span>•</span><span>{formatDate(t.date, 'd MMM')}</span>
                                         </div>
                                     </div>
-                                    <div className={t.type === 'income' ? 'amount-income' : 'amount-expense'} style={{ fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+                                    <div className={t.type === 'income' ? 'amount-income' : 'amount-expense'} style={{ fontSize: 13, fontWeight: 700, flexShrink: 0, textAlign: 'right', minWidth: 80 }}>
                                         {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, currency)}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                                        <button className="btn btn-ghost btn-icon btn-sm" style={{ width: 28, height: 28 }}
+                                            onClick={() => { setEditTarget(t); setShowModal(true) }}>
+                                            <Edit2 size={12} />
+                                        </button>
+                                        <button className="btn btn-ghost btn-icon btn-sm" style={{ width: 28, height: 28, color: 'var(--danger-500)' }}
+                                            onClick={() => handleDelete(t.id)}>
+                                            <Trash2 size={12} />
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -335,6 +360,14 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Transaction Modal */}
+            {showModal && (
+                <TransactionModal
+                    transaction={editTarget}
+                    onClose={() => { setShowModal(false); setEditTarget(null) }}
+                    onSaved={() => { setShowModal(false); setEditTarget(null); fetchStats() }}
+                />
             )}
         </div>
     )

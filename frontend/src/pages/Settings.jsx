@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
-import { User, Lock, Globe, Palette, Bell, Database, Plus, Trash2, Save, ShieldAlert } from 'lucide-react'
+import { User, Lock, Globe, Palette, Bell, Database, Plus, Trash2, Save, ShieldAlert, Edit2, X, RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { getCategories, createCategory, deleteCategory } from '../services/db'
+import { getCategories, createCategory, updateCategory, deleteCategory, resetUserData } from '../services/db'
 import { seedDefaultCategories } from '../utils/seedFirebase'
 import toast from 'react-hot-toast'
 
@@ -43,8 +43,10 @@ export default function Settings() {
     const [savingPwd, setSavingPwd] = useState(false)
     const [activeTab, setActiveTab] = useState('profile')
     const [catForm, setCatForm] = useState({ name: '', type: 'expense', color: '#6366f1', icon: 'tag' })
+    const [editCatTarget, setEditCatTarget] = useState(null)
     const [categories, setCategories] = useState([])
     const [loadingCats, setLoadingCats] = useState(false)
+    const [isResetting, setIsResetting] = useState(false)
 
     const loadCategories = useCallback(async () => {
         if (!user) return
@@ -89,11 +91,27 @@ export default function Settings() {
         e.preventDefault()
         if (!catForm.name) return toast.error('Nom requis')
         try {
-            await createCategory(user.uid, catForm)
-            toast.success('Catégorie créée !')
+            if (editCatTarget) {
+                await updateCategory(editCatTarget.id, catForm)
+                toast.success('Catégorie mise à jour !')
+            } else {
+                await createCategory(user.uid, catForm)
+                toast.success('Catégorie créée !')
+            }
             loadCategories()
             setCatForm({ name: '', type: 'expense', color: '#6366f1', icon: 'tag' })
-        } catch (err) { toast.error('Erreur lors de la création') }
+            setEditCatTarget(null)
+        } catch (err) { toast.error('Erreur lors de la sauvegarde') }
+    }
+
+    const handleEditCategory = (c) => {
+        setEditCatTarget(c)
+        setCatForm({ name: c.name, type: c.type, color: c.color, icon: c.icon || 'tag' })
+    }
+
+    const cancelEditCategory = () => {
+        setEditCatTarget(null)
+        setCatForm({ name: '', type: 'expense', color: '#6366f1', icon: 'tag' })
     }
 
     const handleDeleteCategory = async (id) => {
@@ -112,6 +130,25 @@ export default function Settings() {
             toast.success('Catégories amorcées !')
             if (activeTab === 'categories') loadCategories()
         } catch (err) { toast.error('Erreur d\'amorçage') }
+    }
+
+    const handleResetAccount = async () => {
+        const confirm = window.confirm("⚠️ ATTENTION : Cette action supprimera DÉFINITIVEMENT toutes vos transactions, budgets, objectifs et catégories personnalisées.\n\nÊtes-vous sûr de vouloir continuer ?")
+        if (!confirm) return
+
+        const confirm2 = window.prompt("Veuillez saisir 'RESET' pour confirmer la suppression (en majuscules) :")
+        if (confirm2 !== 'RESET') return
+
+        setIsResetting(true)
+        try {
+            await resetUserData(user.uid)
+            toast.success('Compte réinitialisé avec succès !')
+            window.location.href = '/dashboard' // Refresh to clear state
+        } catch (err) {
+            toast.error('Erreur lors de la réinitialisation')
+        } finally {
+            setIsResetting(false)
+        }
     }
 
     const TABS = [
@@ -238,35 +275,75 @@ export default function Settings() {
 
             {/* Categories */}
             {activeTab === 'categories' && (
-                <SettingSection title="Mes catégories" icon={Globe}>
+                <SettingSection title={editCatTarget ? "Modifier la catégorie" : "Ajouter une catégorie"} icon={Globe}>
                     <form onSubmit={handleAddCategory} style={{ marginBottom: 24 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px auto', gap: 12 }}>
-                            <input className="form-control" placeholder="Nom" value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 60px auto', gap: 12 }}>
+                            <input className="form-control" placeholder="Nom" value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} required />
                             <select className="form-control" value={catForm.type} onChange={e => setCatForm(f => ({ ...f, type: e.target.value }))}>
                                 <option value="expense">Dépense</option>
                                 <option value="income">Revenu</option>
                             </select>
-                            <input type="color" className="form-control" value={catForm.color} onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))} />
-                            <button type="submit" className="btn btn-primary"><Plus size={16} /></button>
+                            <input type="color" className="form-control" style={{ padding: '4px', height: '40px' }} value={catForm.color} onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))} />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button type="submit" className="btn btn-primary">
+                                    {editCatTarget ? <Save size={16} /> : <Plus size={16} />}
+                                </button>
+                                {editCatTarget && (
+                                    <button type="button" className="btn btn-outline" onClick={cancelEditCategory}>
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </form>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {categories.map(c => (
-                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: 'var(--bg-card)', borderRadius: 8 }}>
-                                <div style={{ width: 12, height: 12, borderRadius: '50%', background: c.color }} />
-                                <span style={{ flex: 1 }}>{c.name}</span>
-                                <button className="btn btn-ghost btn-icon" onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button>
-                            </div>
-                        ))}
+                        {loadingCats ? (
+                            <div style={{ textAlign: 'center', padding: '20px' }}><span className="spinner" /></div>
+                        ) : categories.length === 0 ? (
+                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Aucune catégorie personnalisée.</p>
+                        ) : (
+                            categories.map(c => (
+                                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: c.color }} />
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.type === 'income' ? 'Revenu' : 'Dépense'}</div>
+                                    </div>
+                                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleEditCategory(c)}><Edit2 size={14} /></button>
+                                    <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger-500)' }} onClick={() => handleDeleteCategory(c.id)}><Trash2 size={14} /></button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </SettingSection>
             )}
 
             {/* Data */}
             {activeTab === 'data' && (
-                <SettingSection title="Gestion des données" icon={Database}>
-                    <button className="btn btn-danger" onClick={logout}>Se déconnecter</button>
-                </SettingSection>
+                <div>
+                    <SettingSection title="Maintenance du compte" icon={Database}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-base)' }}>
+                                <h4 style={{ marginBottom: 8 }}>Session</h4>
+                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                                    Déconnectez-vous de votre session actuelle sur cet appareil.
+                                </p>
+                                <button className="btn btn-outline" onClick={logout}>Se déconnecter</button>
+                            </div>
+
+                            <div style={{ padding: 16, borderRadius: 12, border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                                <h4 style={{ marginBottom: 8, color: 'var(--danger-500)' }}>Zone de danger</h4>
+                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                                    Réinitialisez votre compte pour supprimer toutes vos transactions, budgets, objectifs et catégories. Cette action est irréversible.
+                                </p>
+                                <button className="btn btn-danger" onClick={handleResetAccount} disabled={isResetting}>
+                                    {isResetting ? <span className="spinner" /> : <RefreshCw size={16} />}
+                                    Réinitialiser mes données
+                                </button>
+                            </div>
+                        </div>
+                    </SettingSection>
+                </div>
             )}
 
             {/* Admin */}

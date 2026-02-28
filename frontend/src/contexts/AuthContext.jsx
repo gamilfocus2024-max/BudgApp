@@ -52,6 +52,36 @@ export function AuthProvider({ children }) {
         return unsubscribe
     }, [])
 
+    // Session timeout logic (15 minutes of inactivity)
+    useEffect(() => {
+        if (!user) return
+
+        let timeoutId
+        const TIMEOUT_DURATION = 15 * 60 * 1000 // 15 minutes
+
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            timeoutId = setTimeout(() => {
+                logout()
+                toast('Session expirée pour inactivité', { icon: '⏳', id: 'session-timeout' })
+            }, TIMEOUT_DURATION)
+        }
+
+        // Events to monitor for activity
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart']
+
+        // Start the timer on mount (when user is logged in)
+        resetTimer()
+
+        // Attach listeners
+        events.forEach(event => window.addEventListener(event, resetTimer))
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            events.forEach(event => window.removeEventListener(event, resetTimer))
+        }
+    }, [user, logout])
+
     const login = useCallback(async (email, password) => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password)
         const profile = await fetchUserProfile(userCredential.user.uid)

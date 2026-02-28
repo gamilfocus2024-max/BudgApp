@@ -33,23 +33,14 @@ export function AuthProvider({ children }) {
         }
     }
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const profile = await fetchUserProfile(firebaseUser.uid)
-                setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    displayName: firebaseUser.displayName,
-                    ...profile
-                })
-            } else {
-                setUser(null)
-            }
-            setLoading(false)
-        })
-
-        return unsubscribe
+    const logout = useCallback(async () => {
+        try {
+            await signOut(auth)
+            setUser(null)
+            toast.success('Déconnexion réussie')
+        } catch (error) {
+            console.error('Logout error:', error)
+        }
     }, [])
 
     const login = useCallback(async (email, password) => {
@@ -90,25 +81,40 @@ export function AuthProvider({ children }) {
         return userData
     }, [])
 
-    const logout = useCallback(async () => {
-        await signOut(auth)
-        setUser(null)
-        toast.success('Déconnexion réussie')
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const profile = await fetchUserProfile(firebaseUser.uid)
+                setUser({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    displayName: firebaseUser.displayName,
+                    ...profile
+                })
+            } else {
+                setUser(null)
+            }
+            setLoading(false)
+        })
+
+        return unsubscribe
     }, [])
 
-    // Session timeout logic (15 minutes of inactivity)
+    // Session timeout logic
     useEffect(() => {
         if (!user) return
 
         let timeoutId
         const TIMEOUT_DURATION = 15 * 60 * 1000 // 15 minutes
 
+        const handleTimeout = () => {
+            logout()
+            toast('Session expirée', { icon: '⏳', id: 'timeout' })
+        }
+
         const resetTimer = () => {
             if (timeoutId) clearTimeout(timeoutId)
-            timeoutId = setTimeout(() => {
-                logout()
-                toast('Session expirée pour inactivité', { icon: '⏳', id: 'session-timeout' })
-            }, TIMEOUT_DURATION)
+            timeoutId = setTimeout(handleTimeout, TIMEOUT_DURATION)
         }
 
         // Events to monitor for activity
